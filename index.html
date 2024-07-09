@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 선생님 다했어요</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f8ff;
+        }
+
+        #app {
+            text-align: center;
+            border: 5px solid #000000;
+            padding: 20px;
+            border-radius: 20px;
+            background-color: #fff;
+        }
+
+        h1 {
+            font-family: 'Noto Sans KR', sans-serif;
+            color: #000000;
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 25px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 80px);
+            grid-template-rows: repeat(5, 80px);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #ffffff;
+            border: 2px solid #333;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.5em;
+            position: relative;
+            transition: background-color 0.3s;
+        }
+
+        .cell .number {
+            font-size: 1.5em;
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .cell .points {
+            font-size: 0.5em;
+            color: #fff;
+            background-color: #FF0000;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            line-height: 1;
+        }
+
+        .completed {
+            background-color: #ffe4e1;
+            color: transparent; /* 완료 시 숫자 숨기기 */
+        }
+
+        .completed::after {
+            content: '🌟'; /* 완료 표시를 위한 귀여운 모양 */
+            font-size: 1.5em;
+            color: #ff69b4;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #resetButton, #pointsResetButton {
+            padding: 10px 20px;
+            font-size: 1.5em;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        #resetButton:hover, #pointsResetButton:hover {
+            background-color: #45a049;
+        }
+
+        .crown {
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-size: 0.6em;
+            color: rgba(255, 215, 0, 0.6); /* 투명한 왕관 아이콘 */
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>📚선생님 다했어요!!!💖</h1>
+        <div class="grid">
+            <!-- 체커보드 셀은 JavaScript로 생성됩니다. -->
+        </div>
+        <button id="resetButton">체크 초기화</button>
+        <button id="pointsResetButton">포인트 초기화</button>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gridElement = document.querySelector('.grid');
+            const resetButton = document.getElementById('resetButton');
+            const pointsResetButton = document.getElementById('pointsResetButton');
+            let points = JSON.parse(localStorage.getItem('points')) || Array(25).fill(0);
+            let completionOrder = [];
+
+            // 체커보드용 25개의 셀 생성
+            for (let i = 1; i <= 25; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+
+                const numberDiv = document.createElement('div');
+                numberDiv.className = 'number';
+                numberDiv.textContent = i;
+
+                const pointsDiv = document.createElement('div');
+                pointsDiv.className = 'points';
+                pointsDiv.textContent = `${points[i - 1]}P`;
+
+                const crownDiv = document.createElement('div');
+                crownDiv.className = 'crown';
+                crownDiv.textContent = '👑';
+                crownDiv.style.display = 'none';
+
+                cell.appendChild(numberDiv);
+                cell.appendChild(pointsDiv);
+                cell.appendChild(crownDiv);
+
+                cell.addEventListener('click', () => {
+                    if (!cell.classList.contains('completed')) {
+                        cell.classList.toggle('completed');
+                        addPoint(i - 1);
+                        pointsDiv.textContent = `${points[i - 1]}P`;
+                        updateCrowns();
+                    }
+                });
+
+                gridElement.appendChild(cell);
+            }
+
+            // 체커보드 초기화 버튼 기능
+            resetButton.addEventListener('click', () => {
+                const cells = document.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    cell.classList.remove('completed');
+                    cell.style.color = ''; // 숫자가 다시 보이도록 설정
+                });
+                completionOrder = [];
+            });
+
+            // 포인트 초기화 버튼 기능
+            pointsResetButton.addEventListener('click', () => {
+                points = Array(25).fill(0);
+                localStorage.setItem('points', JSON.stringify(points));
+                const pointsDivs = document.querySelectorAll('.points');
+                pointsDivs.forEach((pointsDiv, index) => {
+                    pointsDiv.textContent = `${points[index]}P`;
+                });
+                completionOrder = [];
+                updateCrowns();
+            });
+
+            function addPoint(index) {
+                completionOrder.push(index);
+                points[index] += calculatePoints(completionOrder.length);
+                localStorage.setItem('points', JSON.stringify(points));
+            }
+
+            function calculatePoints(order) {
+                if (order <= 10) return 3;
+                if (order <= 20) return 2;
+                return 1;
+            }
+
+            function updateCrowns() {
+                const cells = document.querySelectorAll('.cell');
+                let maxPoints = Math.max(...points);
+                cells.forEach((cell, index) => {
+                    const crown = cell.querySelector('.crown');
+                    if (points[index] === maxPoints && maxPoints > 0) {
+                        crown.style.display = 'block';
+                    } else {
+                        crown.style.display = 'none';
+                    }
+                });
+            }
+
+            updateCrowns();
+        });
+    </script>
+</body>
+</html>
